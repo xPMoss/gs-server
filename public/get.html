@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>gs-pay</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://js.stripe.com/v3/"></script>
+  </head>
+  <body>
+    <section>
+      <div class="product">
+        <div class="description" style="padding: 1rem;">
+          <h2>Get stuff</h2>
+        </div>
+      </div>
+      <form action="/getStuff" method="POST">
+        <button type="submit" id="checkout-button">Get stuff</button>
+      </form>
+    </section>
+  </body>
+</html>
