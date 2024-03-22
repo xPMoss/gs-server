@@ -1,20 +1,17 @@
-const envorinment = require("./environment/environment")
 
-if(!envorinment){
-  console.log("envorinment missing!")
-}
+const env = process.env;
 
 // This is your test secret API key.
-const stripe = require('stripe')(envorinment.SECRET);
+const stripe = require('stripe')(env.SECRET_TEST);
 const express = require('express');
 const app = express();
 app.use(express.static('public'));
 const path = require('path')
 
 
-const YOUR_DOMAIN = envorinment.DOMAIN + ":" + envorinment.PORT;
+const YOUR_DOMAIN = env.DOMAIN + ":" + env.PORT;
 
-app.post('/create-checkout-session', async (req, res) => {
+app.post('/checkout', async (req, res) => {
 
   console.log("req", req)
 
@@ -27,8 +24,8 @@ app.post('/create-checkout-session', async (req, res) => {
       },
     ],
     mode: 'payment',
-    success_url: `${YOUR_DOMAIN}/success.html`,
-    cancel_url: "https://girl-shop-1337.web.app/",
+    success_url: env.DOMAIN,
+    cancel_url: env.DOMAIN,
     automatic_tax: {enabled: true},
   });
 
