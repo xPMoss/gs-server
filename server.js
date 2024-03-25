@@ -30,6 +30,10 @@ app.use(cors())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+});
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
@@ -545,7 +549,7 @@ app.post('/checkout', cors(), verifyToken, async (req, res)=>{
     success_url:  req.body.success_url,
     cancel_url: req.body.cancel_url,
     automatic_tax: {enabled: true},
-    
+
   });
 
 
