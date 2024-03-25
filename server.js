@@ -542,9 +542,10 @@ app.post('/checkout', cors(), verifyToken, async (req, res)=>{
     customer_email:req.body.address.email,
     line_items: line_items,
     mode: 'payment',
-    success_url:  env.DOMAIN + "/checkout/success",
-    cancel_url: env.DOMAIN + "/checkout/failure",
+    success_url:  req.body.success_url,
+    cancel_url: req.body.cancel_url,
     automatic_tax: {enabled: true},
+    
   });
 
 
@@ -564,6 +565,26 @@ app.post('/checkout', cors(), verifyToken, async (req, res)=>{
 });
 
 // Misc
+app.get('/wake-up', cors(), verifyToken, async (req, res)=>{
+
+  //console.log("req:----", req)
+  console.log("body->", req.body)
+
+ 
+  try{
+   
+
+  }
+  catch{
+   
+  }
+
+  
+
+  return res.status(200).json({status:"woke up!"});
+  
+  
+});
 
 // Init
 app.listen(4242, () => console.log('Running on port 4242'));
