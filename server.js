@@ -1,6 +1,4 @@
 require('dotenv').config()
-console.log(process.env.ACCESS) // remove this after you've confirmed it is working
-
 //const env = require('./src/environment/environment');
 const env = process.env;
 

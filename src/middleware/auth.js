@@ -1,8 +1,9 @@
 
 
 // middleware/authMiddleware.js
-const env = require('./../environment/environment');
-
+require('dotenv').config()
+//const env = require('./src/environment/environment');
+const env = process.env;
 
 function verifyToken(req, res, next) {
     const token = req.header('Authorization');
