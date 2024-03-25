@@ -42,6 +42,8 @@ testem.log
 Thumbs.db
 
 # Custom
+/src/environment
+/src/environment/*
 /environment
 /environment/*
 .env
