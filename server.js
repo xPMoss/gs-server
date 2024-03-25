@@ -542,8 +542,8 @@ app.post('/checkout', cors(), verifyToken, async (req, res)=>{
     customer_email:req.body.address.email,
     line_items: line_items,
     mode: 'payment',
-    success_url: "http://localhost:4200/checkout/success",
-    cancel_url: "http://localhost:4200/checkout/failure",
+    success_url:  env.DOMAIN + "/checkout/success",
+    cancel_url: env.DOMAIN + "/checkout/failure",
     automatic_tax: {enabled: true},
   });
 
@@ -564,11 +564,6 @@ app.post('/checkout', cors(), verifyToken, async (req, res)=>{
 });
 
 // Misc
-app.post('/getStuff', verifyToken, async (req, res) => {
-  const session = await stripe.get()
-
-  res.redirect(303, session.url);
-});
 
 // Init
 app.listen(4242, () => console.log('Running on port 4242'));
