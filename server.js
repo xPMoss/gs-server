@@ -1,37 +1,86 @@
+require('dotenv').config()
+console.log(process.env.ACCESS) // remove this after you've confirmed it is working
 
-const env = require('./environment/environment');
-//const env = process.env;
+//const env = require('./src/environment/environment');
+const env = process.env;
 
 // This is your test secret API key.
 const stripe = require('stripe')("sk_test_51Owtf1065nngbryAiEp1d2oa0VifQpOyKngvHNREZIoTEM11oPaJH5tnvwZFNp4Euqn583KqwmOAMKXAjxgsNFBa00p0w2eNsq");
 
 // CRYPTO //
 const crypto = require('crypto');
-let jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
+const passportJwt = require('passport-jwt')
+const bcrypt = require('bcrypt');
+
+const verifyToken = require('./src/middleware/auth');
+
 
 // 
-var cors = require('cors')
+const cors = require('cors')
 
 const bodyParser = require("body-parser");
 const path = require('path')
 
 // EXPRESS //
 const express = require('express');
+const { body, validationResult } = require('express-validator');
+
 const app = express();
 app.use(cors())
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+  
+});
 
 // HTTP //
 const http = require('http');
 const server = http.createServer(app);
 
-
 const YOUR_DOMAIN = env.DOMAIN + ":" + env.PORT;
 
-//
-app.post('/test', cors(), async (req, res)=>{
+// SÄKERHET/HASH PASSWORD //
+async function hash(data) {
+  const hash = crypto.createHash('sha256');
+  hash.update(data);
+
+  return bcrypt.hash(data, 10);
+
+  const sd = bcrypt.hashSync(myPlaintextPassword, saltRounds);
+
+
+  return hash.digest('hex');
+
+
+}
+
+
+app.get('/access', verifyToken, async (req, res) => {
+  console.log("id->", req.query.password)
+
+  //var token = jwt.sign({ foo: 'bar' }, req.query.password);
+  //var token2 = jwt.sign({ foo: 'bar' }, req.query.password, { algorithm: 'RS256' });
+
+
+  let msg = { 
+    message: 'Access granted',
+    input:req.query.password,
+    
+
+  }
+
+  res.json(msg);
+
+});
+
+
+// TEST
+app.get('/test', cors(), verifyToken, async (req, res)=>{
 
 
   const products = await stripe.products.list({
@@ -51,7 +100,7 @@ app.post('/test', cors(), async (req, res)=>{
 });
 
 // Customer
-app.get('/get-customer', cors(), async (req, res)=>{
+app.get('/get-customer', cors(), verifyToken, async (req, res)=>{
   console.clear()
 
   try{
@@ -72,7 +121,7 @@ app.get('/get-customer', cors(), async (req, res)=>{
 
 })
 
-app.post('/create-customer', cors(), async (req, res)=>{
+app.post('/create-customer', cors(), verifyToken, async (req, res)=>{
   /*
   address (object)
   The customer’s address.
@@ -169,7 +218,7 @@ app.post('/create-customer', cors(), async (req, res)=>{
 
 })
 
-app.post('/update-customer', cors(), async (req, res)=>{
+app.post('/update-customer', cors(), verifyToken, async (req, res)=>{
   console.clear()
   console.log("body->", req.body)
 
@@ -221,7 +270,7 @@ app.post('/update-customer', cors(), async (req, res)=>{
 })
 
 
-app.post('/delete-customer', cors(), async (req, res)=>{
+app.post('/delete-customer', cors(), verifyToken, async (req, res)=>{
   console.clear()
   
 
@@ -244,12 +293,8 @@ app.post('/delete-customer', cors(), async (req, res)=>{
 
 })
 
-
-
-
-
 // Products
-app.get('/get-product', cors(), async (req, res)=>{
+app.get('/get-product', cors(), verifyToken, async (req, res)=>{
   console.clear()
 
   try{
@@ -268,7 +313,7 @@ app.get('/get-product', cors(), async (req, res)=>{
 
 });
 
-app.post('/create-product', cors(), async (req, res)=>{
+app.post('/create-product', cors(), verifyToken, async (req, res)=>{
   console.clear()
   console.log("body->", req.body)
 
@@ -292,13 +337,36 @@ default_price_data:{
     const product = await stripe.products.create(data);
     console.log("product", product)
 
-    /*
-    const price = await stripe.prices.create({
-      currency: 'sek',
-      unit_amount: req.body.price,
-      product:req.body.id
-    });
-    */
+    if(product.default_price == null){
+      const priceCreate = await stripe.prices.create({
+        currency: 'sek',
+        unit_amount: req.body.price*100,
+        product: product.id
+      });
+      console.log("priceCreate", priceCreate)
+
+      data.default_price = priceCreate.id;
+      const productUpdate = await stripe.products.update(
+        req.body.id,
+        data
+      );
+      console.log("productUpdate", productUpdate)
+
+    }
+    else{
+      const priceUpdate = await stripe.prices.update(
+        product.default_price,
+        {
+          currency_options:{
+            currency: 'sek',
+            unit_amount: req.body.price*100,
+          }        
+        }
+      );
+      console.log("priceUpdate", priceUpdate)
+
+
+    }
 
     res.json(product);
   }
@@ -313,7 +381,7 @@ default_price_data:{
 
 });
 
-app.post('/update-product', cors(), async (req, res)=>{
+app.post('/update-product', cors(), verifyToken, async (req, res)=>{
   console.clear()
   console.log("body->", req.body)
 
@@ -388,7 +456,7 @@ app.post('/update-product', cors(), async (req, res)=>{
 
 });
 
-app.post('/delete-product', cors(), async (req, res)=>{
+app.post('/delete-product', cors(), verifyToken, async (req, res)=>{
   console.clear()
   console.log("body->", req.body)
 
@@ -416,35 +484,89 @@ app.post('/delete-product', cors(), async (req, res)=>{
 
 });
 
+function createPrice(product) {
+  
+}
 
 // Checkout
-app.post('/checkout', async (req, res)=>{
+app.post('/checkout', cors(), verifyToken, async (req, res)=>{
 
   //console.log("req:----", req)
   console.log("body->", req.body)
 
+  let items = req.body.items
+  let products = []
+  let line_items = []
+
+  for (const item of items) {
+    try{
+      let product = await stripe.products.retrieve(item.uid);
+      products.push(product)
+      
+    
+      if(product.default_price){
+        line_items.push(
+          {
+            price:product.default_price,
+            quantity:1
+          }
+        )
+      }
 
 
+    }
+    catch{
+      //return res.status(404).json({ error: 'Kan inte hitta product' });
+      /*
+      return res.status(200).json(
+        { 
+          msg: 'Checkout', 
+          items:req.body.items, 
+          address:req.body.address,
+          products:products,
+        });
+        */
+    }
+    
+  }
+
+  let data =  { 
+    msg: 'Checkout', 
+    items:req.body.items, 
+    address:req.body.address,
+    products:products,
+    line_items:line_items,
+  }
+
+  //return res.status(200).json(data);
+  
   const session = await stripe.checkout.sessions.create({
-    line_items: [
-      {
-        // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-        price: price,
-        quantity: 1,
-      },
-    ],
+    customer_email:req.body.address.email,
+    line_items: line_items,
     mode: 'payment',
-    success_url: "http://localhost:4200/pay",
-    cancel_url: "http://localhost:4200/pay",
+    success_url: "http://localhost:4200/checkout/success",
+    cancel_url: "http://localhost:4200/checkout/failure",
     automatic_tax: {enabled: true},
   });
+
+
+  return res.status(200).json({link:session.url});
   
-  res.redirect(303, session.url);
+   res.redirect(303, session.url);
   
+  
+ 
+   return res.status(200).json(
+    { 
+      msg: 'Checkout', 
+      items:req.body.items, 
+      address:req.body.address,
+      products:products,
+    });
 });
 
 // Misc
-app.post('/getStuff', async (req, res) => {
+app.post('/getStuff', verifyToken, async (req, res) => {
   const session = await stripe.get()
 
   res.redirect(303, session.url);
@@ -453,5 +575,5 @@ app.post('/getStuff', async (req, res) => {
 // Init
 app.listen(4242, () => console.log('Running on port 4242'));
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '/public/checkout.html'))
+  res.sendFile(path.join(__dirname, '/public/index.html'))
 })

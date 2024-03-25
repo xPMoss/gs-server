@@ -1,0 +1,14 @@
+{
+    "name": "Nodemon Launch Server",
+    "type": "node",
+    "request": "launch",
+    "cwd": "${workspaceFolder}",
+    "runtimeExecutable": "nodemon",
+    "runtimeArgs": [
+        "--inspect-brk"
+    ],
+    "program": "${workspaceFolder}/bin/www",
+    "restart": true,
+    // "console": "integratedTerminal",
+    "internalConsoleOptions": "neverOpen"
+}
