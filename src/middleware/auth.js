@@ -7,7 +7,7 @@ const env = process.env;
 
 function verifyToken(req, res, next) {
     const token = req.header('Authorization');
-    console.log("token", token)
+    //console.log("token", token)
 
 
     if (!token) {
@@ -18,7 +18,7 @@ function verifyToken(req, res, next) {
 
     try {
         
-        console.log("ACCESS", env.ACCESS)
+        //console.log("ACCESS", env.ACCESS)
 
         if (token == env.ACCESS) {
             console.log("token passed")

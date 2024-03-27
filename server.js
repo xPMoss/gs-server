@@ -1,3 +1,6 @@
+
+// Imports
+// #region
 require('dotenv').config()
 //const env = require('./src/environment/environment');
 const env = process.env;
@@ -11,9 +14,9 @@ const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const passportJwt = require('passport-jwt')
 const bcrypt = require('bcrypt');
+const uuid = require('uuid');
 
 const verifyToken = require('./src/middleware/auth');
-
 
 // 
 const cors = require('cors')
@@ -45,40 +48,11 @@ const http = require('http');
 const server = http.createServer(app);
 
 const YOUR_DOMAIN = env.DOMAIN + ":" + env.PORT;
+// #endregion
+
 
 // SÄKERHET/HASH PASSWORD //
-async function hash(data) {
-  const hash = crypto.createHash('sha256');
-  hash.update(data);
-
-  return bcrypt.hash(data, 10);
-
-  const sd = bcrypt.hashSync(myPlaintextPassword, saltRounds);
-
-
-  return hash.digest('hex');
-
-
-}
-
-
-app.get('/access', verifyToken, async (req, res) => {
-  console.log("id->", req.query.password)
-
-  //var token = jwt.sign({ foo: 'bar' }, req.query.password);
-  //var token2 = jwt.sign({ foo: 'bar' }, req.query.password, { algorithm: 'RS256' });
-
-
-  let msg = { 
-    message: 'Access granted',
-    input:req.query.password,
-    
-
-  }
-
-  res.json(msg);
-
-});
+//
 
 
 // TEST
@@ -102,6 +76,7 @@ app.get('/test', cors(), verifyToken, async (req, res)=>{
 });
 
 // Customer
+// #region
 app.get('/get-customer', cors(), verifyToken, async (req, res)=>{
   console.clear()
 
@@ -271,7 +246,6 @@ app.post('/update-customer', cors(), verifyToken, async (req, res)=>{
 
 })
 
-
 app.post('/delete-customer', cors(), verifyToken, async (req, res)=>{
   console.clear()
   
@@ -294,8 +268,11 @@ app.post('/delete-customer', cors(), verifyToken, async (req, res)=>{
   }
 
 })
+// #endregion
+
 
 // Products
+// #region
 app.get('/get-product', cors(), verifyToken, async (req, res)=>{
   console.clear()
 
@@ -329,7 +306,7 @@ app.post('/create-product', cors(), verifyToken, async (req, res)=>{
   }
 
   /*
-default_price_data:{
+  default_price_data:{
     currency: 'sek',
       unit_amount: req.body.price,
   },
@@ -486,86 +463,402 @@ app.post('/delete-product', cors(), verifyToken, async (req, res)=>{
 
 });
 
-function createPrice(product) {
+
+app.post('/create-base-product', cors(), verifyToken, async (req, res)=>{
+  console.clear()
+  console.log("body->", req.body)
+
+  let body = req.body;
+  let uid = uuid.v4();
+
+  let data = {
+    id: body.category + "_" + uid,
+    name: body.title,
+    metadata:{category: body.category},
+  }
+
+  console.log(data)
+
   
-}
+  try{
+    let product = await stripe.products.create(data);
+    console.log("product", product)
+
+    res.json(product);
+  }
+  catch(e){
+    return res.json({
+      success: false,
+      status: 'Failed to create product:'+ data.id
+    });
+
+  }
+
+
+});
+
+app.post('/create-base-products', cors(), verifyToken, async (req, res)=>{
+  console.clear()
+  console.log("body->", req.body)
+
+  let body = req.body;
+  let products = []
+
+  let uid = uuid.v4();
+  let data = {
+    id: "shipping_" + uid,
+    name: "Frakt",
+    metadata:{category: "shipping", product: "shipping"},
+  }
+  let product = await stripe.products.create(data);
+
+  /*
+  for(let item of body.items){
+
+    let uid = uuid.v4();
+
+    let data = {
+      id: item.category + "_" + uid,
+      name: item.title,
+      metadata:{category: item.category},
+    }
+  
+    console.log(data)
+  
+    
+    try{
+      let product = await stripe.products.create(data);
+      console.log("product", product)
+      products.push(product)
+
+    }
+    catch(e){
+      return res.json({
+        success: false,
+        status: 'Failed to create product:' + item.title
+      });
+  
+    }
+
+    
+  }
+  */
+ 
+  return res.status(200).json(products);
+});
+
+app.post('/create-base-prices', cors(), verifyToken, async (req, res)=>{
+  console.clear()
+  console.log("body->", req.body)
+
+  let body = req.body;
+  let uids = body.uids
+
+  
+
+  console.log(body)
+
+  
+  try{
+    let x = 0
+    for (const id of uids) {
+      let pr = [5,10,15,20,30,40,50,60,70,80,90,100]
+
+      for (const iterator of pr) {
+        const priceCreate = await stripe.prices.create({
+          currency: 'sek',
+          unit_amount: iterator*100,
+          product: id,
+          metadata:{category: body.categories[x]},
+        });
+        console.log("priceCreate", priceCreate)
+        x++;
+      }
+
+
+    }
+    
+    return res.status(200).json({success:"success"});
+   
+  }
+  catch(e){
+    return res.json({
+      success: false,
+      status: 'Failed to create prices'
+    });
+
+  }
+
+
+});
+// #endregion
+
 
 // Checkout
+app.post('/test-checkout', cors(), verifyToken, async (req, res)=>{
+
+  //console.log("req:----", req)
+  console.log("body->", req.body)
+
+  let body = req.body
+  let items = req.body.items
+
+  let products = []
+  let prices = []
+
+  let stripeObjects = {
+    bracelets:{
+      product:null,
+      prices:[]
+    },
+    necklaces:{
+      product:null,
+      prices:[]
+    },
+    earrings:{
+      product:null,
+      prices:[]
+    },
+    keyrings:{
+      product:null,
+      prices:[]
+    },
+
+  }
+
+  // Get products and prices
+  let stripeProducts = await stripe.products.list({
+    active:true,
+    limit:100
+  });
+
+  
+  for(let item of stripeProducts.data){
+    if(item.metadata['category'] && item.metadata['category'] != "shipping"){
+      stripeObjects[item.metadata['category']].product = item
+
+    }
+
+  }
+
+  let stripePrices = await stripe.prices.list({
+    active:true,
+    limit:100
+  });
+
+
+  let orderProducts = []
+  for(let item of items){
+    
+    let foundProduct = stripeObjects[item.category].product
+
+    orderProducts.push(
+      {
+        id:foundProduct.id,
+        price:item.price*100
+      }
+      
+    )
+
+  }
+
+  // Add line_items
+  let line_items = []
+  for(let item of orderProducts){
+    
+    let cPrice = {
+      currency: 'sek',
+      unit_amount: item.price,
+      product: item.id
+    }
+
+    let order_item = {
+      price_data: cPrice,
+      quantity: 1,
+    }
+
+    line_items.push(order_item)
+    
+  }
+
+  // Add shipping
+  let shipping = {
+    currency: 'sek',
+    unit_amount: 1900,
+    product: "shipping_bb14879f-3d6e-4230-a8a8-e5df34508777"
+
+  }
+  let shipping_item = {
+    price_data: shipping,
+    quantity: 1,
+  }
+  line_items.push(shipping_item)
+  
+  
+  const session = await stripe.checkout.sessions.create({
+    customer_email:body.email,
+    line_items: line_items,
+    mode: 'payment',
+    success_url: req.body.success_url,
+    cancel_url: req.body.cancel_url,
+    automatic_tax: {enabled: true},
+
+  });
+  
+
+  return res.status(200).json({link:session.url});
+  
+
+  //
+  let log = {
+    items:items,
+    stripeObjects:stripeObjects, 
+    orderProducts:orderProducts,
+    stripePrices:stripePrices,
+    line_items:line_items,
+    sessions:sessions
+  }
+
+  return res.status(200).json(log);
+
+
+  //return res.status(200)
+  
+
+
+
+
+});
+
 app.post('/checkout', cors(), verifyToken, async (req, res)=>{
 
   //console.log("req:----", req)
   console.log("body->", req.body)
 
+  let body = req.body
   let items = req.body.items
-  let products = []
-  let line_items = []
 
-  for (const item of items) {
-    try{
-      let product = await stripe.products.retrieve(item.uid);
-      products.push(product)
-      
+  let stripeObjects = {
+    bracelets:{
+      product:null,
+      prices:[]
+    },
+    necklaces:{
+      product:null,
+      prices:[]
+    },
+    earrings:{
+      product:null,
+      prices:[]
+    },
+    keyrings:{
+      product:null,
+      prices:[]
+    },
+
+  }
+
+  // Get products and prices
+  let stripeProducts = await stripe.products.list({
+    active:true,
+    limit:100
+  });
+
+  
+  for(let item of stripeProducts.data){
+    if(item.metadata['category'] && item.metadata['category'] != "shipping"){
+      stripeObjects[item.metadata['category']].product = item
+
+    }
+
+  }
+
+  /*
+  let stripePrices = await stripe.prices.list({
+    active:true,
+    limit:100
+  });
+  */
+
+  let orderProducts = []
+  for(let item of items){
     
-      if(product.default_price){
-        line_items.push(
-          {
-            price:product.default_price,
-            quantity:1
-          }
-        )
+    let foundProduct = stripeObjects[item.category].product
+
+    orderProducts.push(
+      {
+        id:foundProduct.id,
+        price:item.price*100
       }
+      
+    )
 
+  }
 
+  // Add line_items
+  let line_items = []
+  for(let item of orderProducts){
+    
+    let cPrice = {
+      currency: 'sek',
+      unit_amount: item.price,
+      product: item.id
     }
-    catch{
-      //return res.status(404).json({ error: 'Kan inte hitta product' });
-      /*
-      return res.status(200).json(
-        { 
-          msg: 'Checkout', 
-          items:req.body.items, 
-          address:req.body.address,
-          products:products,
-        });
-        */
+
+    let order_item = {
+      price_data: cPrice,
+      quantity: 1,
     }
+
+    line_items.push(order_item)
     
   }
 
-  let data =  { 
-    msg: 'Checkout', 
-    items:req.body.items, 
-    address:req.body.address,
-    products:products,
-    line_items:line_items,
-  }
+  // Add shipping
+  let shipping = {
+    currency: 'sek',
+    unit_amount: 1900,
+    product: "shipping_bb14879f-3d6e-4230-a8a8-e5df34508777"
 
-  //return res.status(200).json(data);
+  }
+  let shipping_item = {
+    price_data: shipping,
+    quantity: 1,
+  }
+  line_items.push(shipping_item)
   
   const session = await stripe.checkout.sessions.create({
-    customer_email:req.body.address.email,
+    customer_email:body.email,
     line_items: line_items,
     mode: 'payment',
-    success_url:  req.body.success_url,
+    success_url: req.body.success_url, 
     cancel_url: req.body.cancel_url,
     automatic_tax: {enabled: true},
 
   });
 
-
   return res.status(200).json({link:session.url});
   
-   res.redirect(303, session.url);
+
+  //
+  let log = {
+    items:items,
+    stripeObjects:stripeObjects, 
+    orderProducts:orderProducts,
+    stripePrices:stripePrices,
+    line_items:line_items,
+    sessions:sessions
+  }
+
+  return res.status(200).json(log);
+
+
+  //return res.status(200)
   
-  
- 
-   return res.status(200).json(
-    { 
-      msg: 'Checkout', 
-      items:req.body.items, 
-      address:req.body.address,
-      products:products,
-    });
+
+
+
+
 });
 
 // Misc
