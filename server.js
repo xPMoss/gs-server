@@ -16,6 +16,10 @@ const passportJwt = require('passport-jwt')
 const bcrypt = require('bcrypt');
 const uuid = require('uuid');
 
+//
+const nodemailer = require('nodemailer');
+
+//
 const verifyToken = require('./src/middleware/auth');
 
 // 
@@ -858,6 +862,54 @@ app.post('/checkout', cors(), verifyToken, async (req, res)=>{
 
 
 
+
+});
+
+// Email
+app.post('/send-email', (req, res) => {
+  const name = req.body.name;
+  const email = req.body.email;
+  const message = req.body.message;
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    service: 'gmail',
+    auth: {
+      type: "OAUTH2",
+      user: process.env.GMAIL_USERNAME,  //set these in your .env file
+      clientId: process.env.OAUTH_CLIENT_ID,
+      clientSecret: process.env.OAUTH_CLIENT_SECRET,
+      refreshToken: process.env.OAUTH_REFRESH_TOKEN,
+      accessToken: process.env.OAUTH_ACCESS_TOKEN,
+      expires: 3599
+    }
+  });
+
+  const mailOptions = {
+    from: env.EMAIL,
+    to: email, // Replace with recipient email address
+    subject: 'New Contact Form Submission',
+    text: `
+      Name: ${name}
+      Message: ${message}
+    `
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log(error);
+      res.status(500).send('Error sending email');
+
+    }
+    else {
+      console.log('Email sent:', info.response);
+      res.status(200).send('Email sent successfully');
+
+    }
+
+  });
 
 });
 
