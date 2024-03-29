@@ -6,7 +6,7 @@ require('dotenv').config()
 const env = process.env;
 
 // This is your test secret API key.
-const stripe = require('stripe')("sk_test_51Owtf1065nngbryAiEp1d2oa0VifQpOyKngvHNREZIoTEM11oPaJH5tnvwZFNp4Euqn583KqwmOAMKXAjxgsNFBa00p0w2eNsq");
+const stripe = require('stripe')(env.SECRET);
 
 // CRYPTO //
 const crypto = require('crypto');
